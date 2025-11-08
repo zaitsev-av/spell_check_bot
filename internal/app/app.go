@@ -9,18 +9,23 @@ import (
 	"spell_bot/internal/bot"
 	"spell_bot/internal/config"
 	"spell_bot/internal/deepseek"
+	"spell_bot/internal/storage/sqlite"
 	"syscall"
 	"time"
 )
 
 type App struct {
-	logger *slog.Logger
-	cfg    *config.Config
-	bot    *bot.Bot
+	logger  *slog.Logger
+	cfg     *config.Config
+	bot     *bot.Bot
+	storage *sqlite.Storage
 }
 
 func NewApp(cfg *config.Config) *App {
+	const op = "app.NewApp"
 	logger := initLogger(cfg.DebugMode)
+	logger = logger.With("op", op)
+	logger.Info("initializing app")
 	deepseekClient := deepseek.NewClient(cfg.DeepSeekAPIKey)
 
 	telegramBot, err := bot.NewBot(cfg.TelegramToken, deepseekClient, logger)
@@ -28,11 +33,17 @@ func NewApp(cfg *config.Config) *App {
 		logger.Error("failed to initialize telegram bot", "error", err)
 		return nil
 	}
+	sqliteStorage, err := sqlite.NewStorage(cfg.SQLitePath)
+	if err != nil {
+		logger.Error("failed to initialize sqlite storage", "error", err)
+		return nil
+	}
 
 	return &App{
-		cfg:    cfg,
-		logger: logger,
-		bot:    telegramBot,
+		cfg:     cfg,
+		logger:  logger,
+		bot:     telegramBot,
+		storage: sqliteStorage,
 	}
 }
 

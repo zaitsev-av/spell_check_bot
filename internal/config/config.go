@@ -8,6 +8,8 @@ type Config struct {
 	TelegramToken  string `envconfig:"TELEGRAM_BOT_TOKEN"`
 	DeepSeekAPIKey string `envconfig:"DEEPSEEK_API_KEY"`
 	DebugMode      bool   `envconfig:"DEBUG_MODE"`
+
+	SQLitePath string `envconfig:"SQLITE_PATH"`
 }
 
 func Load() (*Config, error) {
