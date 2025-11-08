@@ -74,3 +74,8 @@ func (b *Bot) API() *tgbotapi.BotAPI {
 func (b *Bot) GetUsername() string {
 	return b.api.Self.UserName
 }
+
+func (b *Bot) Stop() {
+	b.logger.Info("stopping bot")
+	b.api.StopReceivingUpdates()
+}

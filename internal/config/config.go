@@ -1,46 +1,20 @@
 package config
 
 import (
-	"os"
-	"strconv"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	TelegramToken  string
-	DeepSeekAPIKey string
-	DebugMode      bool
+	TelegramToken  string `envconfig:"TELEGRAM_BOT_TOKEN"`
+	DeepSeekAPIKey string `envconfig:"DEEPSEEK_API_KEY"`
+	DebugMode      bool   `envconfig:"DEBUG_MODE"`
 }
 
 func Load() (*Config, error) {
-	cfg := &Config{
-		TelegramToken:  getEnv("TELEGRAM_BOT_TOKEN", ""),
-		DeepSeekAPIKey: getEnv("DEEPSEEK_API_KEY", ""),
-		DebugMode:      getEnvAsBool("DEBUG_MODE", false),
+	var c Config
+	err := envconfig.Process("", &c)
+	if err != nil {
+		return nil, err
 	}
-
-	if cfg.TelegramToken == "" {
-		return nil, ErrMissingTelegramToken
-	}
-
-	if cfg.DeepSeekAPIKey == "" {
-		return nil, ErrMissingDeepSeekAPIKey
-	}
-
-	return cfg, nil
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsBool(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			return boolValue
-		}
-	}
-	return defaultValue
+	return &c, nil
 }
