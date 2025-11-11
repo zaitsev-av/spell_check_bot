@@ -19,6 +19,10 @@ func main() {
 		slog.Error("failed to load configuration", "error", err)
 		os.Exit(1)
 	}
-	app := app.NewApp(cfg)
+	app, err := app.NewApp(cfg)
+	if err != nil {
+		slog.Error("failed to create app", "error", err)
+		os.Exit(1)
+	}
 	app.Run(ctx)
 }

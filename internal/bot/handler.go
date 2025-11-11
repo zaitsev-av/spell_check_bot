@@ -2,11 +2,15 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"log/slog"
 	"strings"
+	"time"
 
 	"spell_bot/internal/deepseek"
+	"spell_bot/internal/entity"
+	"spell_bot/internal/storage"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -14,13 +18,15 @@ import (
 type Handler struct {
 	bot      *tgbotapi.BotAPI
 	deepseek *deepseek.Client
+	storage  storage.Storage
 	logger   *slog.Logger
 }
 
-func NewHandler(bot *tgbotapi.BotAPI, deepseek *deepseek.Client, logger *slog.Logger) *Handler {
+func NewHandler(bot *tgbotapi.BotAPI, deepseek *deepseek.Client, storage storage.Storage, logger *slog.Logger) *Handler {
 	return &Handler{
 		bot:      bot,
 		deepseek: deepseek,
+		storage:  storage,
 		logger:   logger,
 	}
 }
@@ -39,16 +45,49 @@ func (h *Handler) HandleUpdate(ctx context.Context, update tgbotapi.Update) {
 	}
 
 	if strings.HasPrefix(text, "/start") {
+		h.saveUser(ctx, update.Message)
 		h.sendWelcomeMessage(chatID)
 		return
 	}
 
 	if strings.HasPrefix(text, "/help") {
+		h.saveUser(ctx, update.Message)
 		h.sendHelpMessage(chatID)
 		return
 	}
 
 	h.processTextCheck(ctx, chatID, text, update.Message.Chat.UserName)
+}
+
+// saveUser сохраняет или обновляет информацию о пользователе
+func (h *Handler) saveUser(ctx context.Context, msg *tgbotapi.Message) error {
+	if msg.From == nil {
+		return nil // Сообщения от каналов не имеют From
+	}
+
+	user := entity.NewUser(
+		msg.From.ID,
+		msg.Chat.ID,
+		msg.From.UserName,
+		msg.From.FirstName,
+		msg.From.LastName,
+	)
+
+	// Используем контекст с таймаутом для операции с БД
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	if err := h.storage.SaveUser(dbCtx, user); err != nil {
+		return fmt.Errorf("failed to save user: %w", err)
+	}
+
+	h.logger.Info("user saved",
+		"telegram_id", user.TelegramID,
+		"username", user.Username,
+		"chat_id", user.ChatID,
+	)
+
+	return nil
 }
 
 func (h *Handler) processTextCheck(ctx context.Context, chatID int64, text string, user string) {

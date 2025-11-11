@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"spell_bot/internal/deepseek"
+	"spell_bot/internal/storage"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -16,14 +17,14 @@ type Bot struct {
 	logger  *slog.Logger
 }
 
-func NewBot(token string, deepseekClient *deepseek.Client, logger *slog.Logger) (*Bot, error) {
+func NewBot(token string, deepseekClient *deepseek.Client, storage storage.Storage, logger *slog.Logger) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create handler with the bot API
-	handler := NewHandler(api, deepseekClient, logger)
+	handler := NewHandler(api, deepseekClient, storage, logger)
 
 	bot := &Bot{
 		api:     api,
