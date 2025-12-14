@@ -1,8 +1,8 @@
 # Multi-stage build for Go application
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata
+# Install build dependencies (добавляем gcc и musl-dev для CGO)
+RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
 
 # Set working directory
 WORKDIR /app
@@ -17,13 +17,13 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/spell_bot ./cmd/bot
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o /app/bin/spell_bot ./cmd/bot
 
 # Final stage
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata
+# Install runtime dependencies (libgcc для sqlite3)
+RUN apk --no-cache add ca-certificates tzdata libgcc
 
 # Create non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -42,13 +42,6 @@ RUN chown -R appuser:appgroup /app
 
 # Switch to non-root user
 USER appuser
-
-# Expose port (if needed)
-# EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Set environment variables
 ENV DEBUG_MODE=false
